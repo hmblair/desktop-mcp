@@ -119,7 +119,7 @@ export function installClaudeCode(serverName: string, mcpUrl: string): void {
 export function uninstallClaudeCode(serverName: string): void {
   const { execFileSync } = require("child_process");
   try {
-    execFileSync("claude", ["mcp", "remove", "--scope", "user", serverName], { stdio: "inherit" });
+    execFileSync("claude", ["mcp", "remove", "--scope", "user", serverName], { stdio: "ignore" });
   } catch {
     // May not be installed
   }

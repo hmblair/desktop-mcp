@@ -18,8 +18,14 @@ const SERVER_NAME = "thunderbird-mcp";
 const HTTP_PORT = 8766;
 const MCP_URL = `http://localhost:${HTTP_PORT}/mcp`;
 
-// Old tool-group server names to clean up on install/uninstall
-const OLD_SERVERS = ["thunderbird-mail", "thunderbird-calendar", "thunderbird-feeds"];
+// Silently remove old tool-group servers from a previous installation
+function cleanupOldServers() {
+  for (const name of ["thunderbird-mail", "thunderbird-calendar", "thunderbird-feeds"]) {
+    uninstallClaudeCode(name);
+    uninstallClaudeDesktop(name);
+    uninstallOpenCode(name);
+  }
+}
 
 async function install() {
   console.log();
@@ -31,12 +37,7 @@ async function install() {
     allowedExtensions: ["thunderbird-mcp@luthriel.dev"],
   });
 
-  // Clean up old tool-group servers
-  for (const name of OLD_SERVERS) {
-    uninstallClaudeCode(name);
-    uninstallClaudeDesktop(name);
-    uninstallOpenCode(name);
-  }
+  cleanupOldServers();
 
   console.log();
   if (await ask("Install into Claude Code? [Y/n] ")) {
@@ -66,12 +67,6 @@ function uninstall() {
   uninstallClaudeCode(SERVER_NAME);
   uninstallClaudeDesktop(SERVER_NAME);
   uninstallOpenCode(SERVER_NAME);
-  // Also remove old tool-group servers if they exist
-  for (const name of OLD_SERVERS) {
-    uninstallClaudeCode(name);
-    uninstallClaudeDesktop(name);
-    uninstallOpenCode(name);
-  }
   console.log();
 }
 
