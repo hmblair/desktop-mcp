@@ -120,8 +120,8 @@ export function createServer<TApi extends BaseBrowserAPI<ServerMessageBase, Exte
 
     const httpServer = http.createServer(async (req, res) => {
       if (req.url !== "/mcp") {
-        res.writeHead(404);
-        res.end("Not found");
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Not found. Use /mcp endpoint." }));
         return;
       }
 
