@@ -15,7 +15,8 @@ install:
 	cd packages/firefox && make install
 	cd packages/thunderbird && make install
 
-uninstall:
+uninstall: node_modules
+	npm run build -w packages/shared
 	cd packages/firefox && make uninstall
 	cd packages/thunderbird && make uninstall
 
