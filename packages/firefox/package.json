@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hmblair/firefox-mcp"
+    "url": "https://github.com/hmblair/desktop-mcp"
   },
   "main": "./server/dist/index.js",
   "bin": {
@@ -20,7 +20,8 @@
     "build:extension": "esbuild extension/background.ts --bundle --outfile=extension/dist/background.js",
     "typecheck": "tsc --noEmit -p extension/tsconfig.json",
     "build": "npm run typecheck && npm run build:server && npm run build:extension",
-    "test": "node test/smoke.cjs"
+    "test": "node test/smoke.cjs",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "@desktop-mcp/shared": "*",
