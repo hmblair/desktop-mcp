@@ -20,7 +20,7 @@ export const CONFIG_PATHS = {
   openCode: path.join(home, ".config", "opencode", "opencode.json"),
   nativeMessagingHosts:
     process.platform === "darwin"
-      ? path.join(home, "Library", "Mozilla", "NativeMessagingHosts")
+      ? path.join(home, "Library", "Application Support", "Mozilla", "NativeMessagingHosts")
       : path.join(home, ".mozilla", "native-messaging-hosts"),
 };
 
