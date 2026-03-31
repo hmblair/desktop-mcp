@@ -1,0 +1,47 @@
+{
+  "name": "thunderbird-mcp",
+  "version": "0.6.0",
+  "description": "MCP server for Thunderbird - enables AI assistants to access email, contacts, and calendars",
+  "author": "Hamish Blair",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hmblair/desktop-mcp"
+  },
+  "keywords": [
+    "mcp",
+    "thunderbird",
+    "email",
+    "ai",
+    "claude"
+  ],
+  "main": "./server/dist/index.js",
+  "bin": {
+    "thunderbird-mcp": "./server/dist/native-host.js"
+  },
+  "files": [
+    "server/dist/",
+    "extension/",
+    "headless/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:server": "esbuild server/native-host.ts --bundle --platform=node --outfile=server/dist/native-host.js --format=cjs --external:@modelcontextprotocol/sdk --external:zod && esbuild server/index.ts --bundle --platform=node --outfile=server/dist/index.js --format=cjs --external:@modelcontextprotocol/sdk --external:zod",
+    "typecheck": "tsc --noEmit -p server/tsconfig.json",
+    "build": "npm run build:server",
+    "test": "node test/smoke.cjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@desktop-mcp/shared": "*",
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

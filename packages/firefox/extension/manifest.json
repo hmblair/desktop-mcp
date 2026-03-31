@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "Firefox MCP",
+  "version": "0.0.0",
+  "description": "An extension that enables MCP clients to control the browser.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "nativeMessaging",
+    "<all_urls>"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "firefox-mcp@hmblair.dev"
+    }
+  },
+  "background": {
+    "scripts": ["dist/background.js"],
+    "persistent": true
+  }
+}

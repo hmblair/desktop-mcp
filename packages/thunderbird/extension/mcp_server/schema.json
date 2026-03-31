@@ -1,0 +1,34 @@
+[
+  {
+    "namespace": "mcpServer",
+    "description": "MCP server for AI integration",
+    "functions": [
+      {
+        "name": "init",
+        "type": "function",
+        "async": true,
+        "description": "Initialize domain handlers in the privileged parent scope",
+        "parameters": []
+      },
+      {
+        "name": "callTool",
+        "type": "function",
+        "async": true,
+        "description": "Call a tool handler by name",
+        "parameters": [
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Tool handler name"
+          },
+          {
+            "name": "args",
+            "type": "object",
+            "description": "Tool arguments",
+            "additionalProperties": true
+          }
+        ]
+      }
+    ]
+  }
+]

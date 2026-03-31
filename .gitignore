@@ -1,0 +1,28 @@
+# Build output
+dist/
+*.xpi
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-*
+
+# MCP config (contains local paths)
+.mcp.json
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Logs
+*.log
