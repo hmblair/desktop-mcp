@@ -8,6 +8,8 @@ const {
   uninstallNativeHost,
   installClaudeCode,
   uninstallClaudeCode,
+  installClaudeDesktop,
+  uninstallClaudeDesktop,
   installOpenCode,
   uninstallOpenCode,
 } = require("@desktop-mcp/shared");
@@ -32,12 +34,19 @@ async function install() {
   // Clean up old tool-group servers
   for (const name of OLD_SERVERS) {
     uninstallClaudeCode(name);
+    uninstallClaudeDesktop(name);
     uninstallOpenCode(name);
   }
 
   console.log();
   if (await ask("Install into Claude Code? [Y/n] ")) {
     installClaudeCode(SERVER_NAME, MCP_URL);
+  } else {
+    console.log("  Skipped.");
+  }
+  console.log();
+  if (await ask("Install into Claude Desktop? [Y/n] ")) {
+    installClaudeDesktop(SERVER_NAME, MCP_URL);
   } else {
     console.log("  Skipped.");
   }
@@ -55,10 +64,12 @@ function uninstall() {
   console.log();
   uninstallNativeHost("thunderbird_mcp");
   uninstallClaudeCode(SERVER_NAME);
+  uninstallClaudeDesktop(SERVER_NAME);
   uninstallOpenCode(SERVER_NAME);
   // Also remove old tool-group servers if they exist
   for (const name of OLD_SERVERS) {
     uninstallClaudeCode(name);
+    uninstallClaudeDesktop(name);
     uninstallOpenCode(name);
   }
   console.log();

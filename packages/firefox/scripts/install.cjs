@@ -8,6 +8,8 @@ const {
   uninstallNativeHost,
   installClaudeCode,
   uninstallClaudeCode,
+  installClaudeDesktop,
+  uninstallClaudeDesktop,
   installOpenCode,
   uninstallOpenCode,
 } = require("@desktop-mcp/shared");
@@ -33,6 +35,12 @@ async function install() {
     console.log("  Skipped.");
   }
   console.log();
+  if (await ask("Install into Claude Desktop? [Y/n] ")) {
+    installClaudeDesktop(SERVER_NAME, MCP_URL);
+  } else {
+    console.log("  Skipped.");
+  }
+  console.log();
   if (await ask("Install into OpenCode (~/.config/opencode/opencode.json)? [Y/n] ")) {
     installOpenCode(SERVER_NAME, MCP_URL);
   } else {
@@ -46,6 +54,7 @@ function uninstall() {
   console.log();
   uninstallNativeHost("firefox_mcp");
   uninstallClaudeCode(SERVER_NAME);
+  uninstallClaudeDesktop(SERVER_NAME);
   uninstallOpenCode(SERVER_NAME);
   console.log();
 }

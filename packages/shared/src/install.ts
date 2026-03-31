@@ -126,6 +126,30 @@ export function uninstallClaudeCode(serverName: string): void {
 }
 
 /**
+ * Install into Claude Desktop config.
+ */
+export function installClaudeDesktop(serverName: string, mcpUrl: string): void {
+  const configPath = CONFIG_PATHS.claudeDesktop;
+  if (!fs.existsSync(path.dirname(configPath))) return;
+  const config = readJson(configPath) || {};
+  if (!config.mcpServers) config.mcpServers = {};
+  config.mcpServers[serverName] = { url: mcpUrl };
+  writeJson(configPath, config);
+  console.log(`  Added ${serverName} to ${configPath}`);
+}
+
+/**
+ * Remove from Claude Desktop config.
+ */
+export function uninstallClaudeDesktop(serverName: string): void {
+  const config = readJson(CONFIG_PATHS.claudeDesktop);
+  if (!config?.mcpServers?.[serverName]) return;
+  delete config.mcpServers[serverName];
+  writeJson(CONFIG_PATHS.claudeDesktop, config);
+  console.log(`  Removed ${serverName} from ${CONFIG_PATHS.claudeDesktop}`);
+}
+
+/**
  * Install into OpenCode config.
  */
 export function installOpenCode(serverName: string, mcpUrl: string): void {

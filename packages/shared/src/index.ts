@@ -20,6 +20,8 @@ export {
   uninstallNativeHost,
   installClaudeCode,
   uninstallClaudeCode,
+  installClaudeDesktop,
+  uninstallClaudeDesktop,
   installOpenCode,
   uninstallOpenCode,
 } from "./install";
