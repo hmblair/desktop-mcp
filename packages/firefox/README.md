@@ -42,8 +42,12 @@ Open tab contents are also available as MCP resources.
 ### 1. Build
 
 ```sh
+git clone https://github.com/hmblair/desktop-mcp.git
+cd desktop-mcp
 npm install
-make build
+npm run build -w packages/shared
+npm run build -w packages/firefox
+cd packages/firefox && make
 ```
 
 ### 2. Install
@@ -84,9 +88,10 @@ This means:
 ## Development
 
 ```sh
-make build    # Compile TypeScript and package extension XPI
-make clean    # Remove build artifacts
-make tag      # Tag current version in git
+npm run build -w packages/shared   # Build shared package (from repo root)
+npm run build -w packages/firefox  # Build server + extension
+cd packages/firefox && make        # Package extension XPI
+npm run test -w packages/firefox   # Run smoke tests
 ```
 
 ## Project Structure

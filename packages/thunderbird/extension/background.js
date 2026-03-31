@@ -1,5 +1,6 @@
 /* global browser */
 
+// Must match NATIVE_APP_NAME in common/index.ts and the native host manifest
 const NATIVE_APP_NAME = "thunderbird_mcp";
 
 async function init() {

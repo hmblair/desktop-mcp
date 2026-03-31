@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+
+      - name: Build shared
+        run: npm run build -w packages/shared
+
+      - name: Build firefox
+        run: npm run build -w packages/firefox
+
+      - name: Build thunderbird
+        run: npm run build -w packages/thunderbird
+
+      - name: Test firefox
+        run: npm run test -w packages/firefox
+
+      - name: Test thunderbird
+        run: npm run test -w packages/thunderbird
+
+      - name: Build XPIs
+        run: |
+          cd packages/firefox && make dist/firefox-mcp.xpi
+          cd ../thunderbird && make dist/thunderbird-mcp.xpi
