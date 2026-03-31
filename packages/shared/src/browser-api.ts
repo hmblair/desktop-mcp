@@ -46,7 +46,8 @@ export class BaseBrowserAPI<
 
     process.stdin.on("end", () => {
       this.connected = false;
-      console.error("[native] Extension disconnected (stdin closed)");
+      console.error("[native] Extension disconnected (stdin closed), exiting");
+      process.exit(0);
     });
 
     this.connected = true;

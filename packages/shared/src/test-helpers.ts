@@ -110,9 +110,7 @@ export async function smokeTest(opts: {
     process.stderr.write(chunk);
   });
 
-  // Close stdin to simulate no extension connected
-  child.stdin?.end();
-
+  // Keep stdin open so the process doesn't exit before we can test
   try {
     await waitForServer(httpPort);
 
