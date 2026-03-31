@@ -32,6 +32,7 @@ The Node.js server exposes MCP over Streamable HTTP on `localhost:8766/mcp`. It 
 | `getNewMail` | Check for new mail from the server — one account or all at once |
 | `deleteMessages` | Delete messages from a folder |
 | `deleteMessagesBySender` | Delete all messages from one or more senders across all folders |
+| `getAttachment` | Download an email attachment and save it to a local file |
 | `unsubscribe` | Unsubscribe from a mailing list via one-click POST (RFC 8058) |
 
 ### Compose

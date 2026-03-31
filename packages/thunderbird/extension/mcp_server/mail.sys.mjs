@@ -442,6 +442,41 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
     return null;
   }
 
+  function stripQuotedReply(text) {
+    if (!text) return text;
+    const lines = text.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      // "On ... wrote:" (Apple Mail, Gmail) — single or two-line form
+      if (/^On .+ wrote:$/i.test(line) ||
+          /^On .+ wrote:$/i.test(line + " " + (lines[i + 1] || "").trim())) {
+        return lines.slice(0, i).join("\n").replace(/\n+$/, "");
+      }
+      // Outlook separator: line of underscores followed by "From:" header
+      if (/^_{3,}$/.test(line)) {
+        return lines.slice(0, i).join("\n").replace(/\n+$/, "");
+      }
+      // "--- Original Message ---" / "--- Forwarded message ---"
+      if (/^-{3,}\s*(Original Message|Forwarded message)/i.test(line)) {
+        return lines.slice(0, i).join("\n").replace(/\n+$/, "");
+      }
+      // Gmail-style "---------- Forwarded message ----------"
+      if (/^-{5,}\s*Forwarded message\s*-{5,}$/i.test(line)) {
+        return lines.slice(0, i).join("\n").replace(/\n+$/, "");
+      }
+      // Block of consecutive ">" quoted lines (no preceding marker)
+      if (line.startsWith(">")) {
+        let j = i;
+        while (j < lines.length && (lines[j].trim().startsWith(">") || lines[j].trim() === "")) j++;
+        // Only strip if the quoted block extends to near the end of the message
+        if (j >= lines.length - 2) {
+          return lines.slice(0, i).join("\n").replace(/\n+$/, "");
+        }
+      }
+    }
+    return text;
+  }
+
   function extractBody(aMimeMsg) {
     let body = "";
     try {
@@ -462,7 +497,7 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
         body = "(Could not extract body text)";
       }
     }
-    return body;
+    return stripQuotedReply(body);
   }
 
   function extractAttachmentInfo(aMimeMsg) {
@@ -472,7 +507,11 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
         attachments.push({
           name: att?.name || "",
           contentType: att?.contentType || "",
-          size: typeof att?.size === "number" ? att.size : null,
+          size: typeof att?.size === "number"
+            ? (att.size < 1024 ? `${att.size} B`
+              : att.size < 1048576 ? `${(att.size / 1024).toFixed(1)} KB`
+              : `${(att.size / 1048576).toFixed(1)} MB`)
+            : null,
         });
       }
     }
@@ -809,6 +848,67 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
     }
   }
 
+  async function getAttachment(args) {
+    const { messageId, folderPath, attachmentName, attachmentIndex, savePath } = args;
+    mcpDebug("getAttachment", { messageId, folderPath, attachmentName, attachmentIndex, savePath });
+
+    if (!messageId || !folderPath) {
+      return { error: "messageId and folderPath are required" };
+    }
+    if (!savePath) {
+      return { error: "savePath is required" };
+    }
+
+    const found = findMessage(messageId, folderPath);
+    if (found.error) return { error: found.error };
+
+    // Get attachment metadata via MimeMessage to resolve name/index to partName
+    const aMimeMsg = await new Promise((resolve) => {
+      MsgHdrToMimeMessage(found.msgHdr, null, (_hdr, msg) => resolve(msg), true, { examineEncryptedParts: true });
+    });
+    if (!aMimeMsg) return { error: "Could not parse message" };
+
+    const attachments = aMimeMsg.allUserAttachments || [];
+    if (attachments.length === 0) return { error: "Message has no attachments" };
+
+    let att;
+    if (attachmentName) {
+      att = attachments.find(a => a.name === attachmentName);
+    } else if (attachmentIndex !== undefined) {
+      att = attachments[Number(attachmentIndex)];
+    } else {
+      att = attachments[0];
+    }
+
+    if (!att) {
+      return { error: `Attachment not found. Available: ${attachments.map(a => a.name).join(", ")}` };
+    }
+
+    // Use MsgHdrProcessor to read the attachment bytes
+    const { MsgHdrProcessor } = ChromeUtils.importESModule(
+      "resource:///modules/ExtensionMessages.sys.mjs"
+    );
+    const processor = new MsgHdrProcessor(found.msgHdr, { strFormat: "binarystring" });
+    const part = await processor.getAttachmentPart(att.partName, { includeRaw: true });
+    if (!part) return { error: "Could not read attachment data" };
+
+    const bytes = new Uint8Array(part.body.length);
+    for (let i = 0; i < part.body.length; i++) {
+      bytes[i] = part.body.charCodeAt(i) & 0xff;
+    }
+
+    await IOUtils.write(savePath, bytes);
+
+    return {
+      name: att.name,
+      contentType: att.contentType || "",
+      size: bytes.length < 1024 ? `${bytes.length} B`
+        : bytes.length < 1048576 ? `${(bytes.length / 1024).toFixed(1)} KB`
+        : `${(bytes.length / 1048576).toFixed(1)} MB`,
+      savedTo: savePath,
+    };
+  }
+
   function unsubscribe(args) {
     const { messageId, folderPath } = args;
     mcpDebug("unsubscribe", { messageId, folderPath });
@@ -873,6 +973,7 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
     deleteMessagesBySender,
     updateMessages,
     getNewMail,
+    getAttachment,
     unsubscribe,
   };
 }

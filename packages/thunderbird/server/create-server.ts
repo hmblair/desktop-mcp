@@ -410,6 +410,19 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
   );
 
   mcpServer.tool(
+    "getAttachment",
+    `Download an attachment from an email message and save it to a local file. Use searchMessages with hasAttachments=true to find messages with attachments, then getThread to see attachment names.`,
+    {
+      messageId: z.string().describe(`Message ID (short hex ID from searchMessages results)`),
+      folderPath: z.string().describe(`Folder path (e.g. 'user@example.com/Inbox')`),
+      attachmentName: z.string().optional().describe(`Filename of the attachment to download. If omitted and attachmentIndex is also omitted, downloads the first attachment.`),
+      attachmentIndex: z.coerce.number().optional().describe(`Zero-based index of the attachment to download (alternative to attachmentName)`),
+      savePath: z.string().describe(`Local file path to save the attachment to`),
+    },
+    async (args) => call("getAttachment", args)
+  );
+
+  mcpServer.tool(
     "unsubscribe",
     `Unsubscribe from a mailing list by sending a one-click unsubscribe POST request using the message's List-Unsubscribe header (RFC 8058).`,
     {

@@ -78,17 +78,32 @@ function waitForServer(port: number, timeoutMs = 5000): Promise<void> {
   });
 }
 
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = require("net").createServer();
+    srv.listen(0, "127.0.0.1", () => {
+      const port = srv.address().port;
+      srv.close(() => resolve(port));
+    });
+    srv.on("error", reject);
+  });
+}
+
 export async function smokeTest(opts: {
   nativeHostPath: string;
   httpPort: number;
   expectedServerName: string;
   minTools: number;
 }): Promise<void> {
-  const { nativeHostPath, httpPort, expectedServerName, minTools } = opts;
+  const { nativeHostPath, expectedServerName, minTools } = opts;
 
-  // Spawn the native host with stdin piped (will get EOF immediately, that's fine)
+  // Pick a free port to avoid conflicts with running servers
+  const httpPort = await getFreePort();
+
+  // Spawn the native host with MCP_PORT override
   const child: ChildProcess = spawn("node", [nativeHostPath], {
     stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, MCP_PORT: String(httpPort) },
   });
 
   child.stderr?.on("data", (chunk: Buffer) => {

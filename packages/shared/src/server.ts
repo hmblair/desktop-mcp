@@ -147,8 +147,9 @@ export function createServer<TApi extends BaseBrowserAPI<ServerMessageBase, Exte
       });
     });
 
-    httpServer.listen(options.httpPort, "127.0.0.1", () => {
-      console.error(`MCP Server running on http://127.0.0.1:${options.httpPort}/mcp`);
+    const port = parseInt(process.env.MCP_PORT || "", 10) || options.httpPort;
+    httpServer.listen(port, "127.0.0.1", () => {
+      console.error(`MCP Server running on http://127.0.0.1:${port}/mcp`);
     });
 
     function shutdown(reason: string) {
