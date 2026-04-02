@@ -29,9 +29,15 @@
     "dayjs": "^1.11.13",
     "zod": "^3.24.0"
   },
+  "files": [
+    "server/dist/",
+    "extension/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
   "devDependencies": {
     "@types/firefox-webext-browser": "^120.0.4",
-    "esbuild": "0.25.1",
-    "typescript": "^5.8.2"
+    "@types/node": "^22.0.0"
   }
 }

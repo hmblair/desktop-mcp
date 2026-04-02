@@ -30,7 +30,7 @@
   "scripts": {
     "build:server": "esbuild server/native-host.ts --bundle --platform=node --outfile=server/dist/native-host.js --format=cjs --external:@modelcontextprotocol/sdk --external:zod && esbuild server/index.ts --bundle --platform=node --outfile=server/dist/index.js --format=cjs --external:@modelcontextprotocol/sdk --external:zod",
     "typecheck": "tsc --noEmit -p server/tsconfig.json",
-    "build": "npm run build:server",
+    "build": "npm run typecheck && npm run build:server",
     "test": "node test/smoke.cjs",
     "prepublishOnly": "npm run build && npm test"
   },

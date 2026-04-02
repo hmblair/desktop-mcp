@@ -2,6 +2,8 @@ import {
   createServer as createSharedServer,
   McpServer,
   ResourceTemplate,
+  toolResponse,
+  toolError,
 } from "@desktop-mcp/shared";
 import type { ManagedServer } from "@desktop-mcp/shared";
 import { z } from "zod";
@@ -10,19 +12,6 @@ import { HTTP_PORT } from "../common";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
-
-export function toolResponse(data: Record<string, unknown> | unknown[], isError = false) {
-  const content: { type: "text"; text: string; isError?: true }[] = [
-    { type: "text", text: JSON.stringify(data, null, 2), ...(isError && { isError: true as const }) },
-  ];
-  return { content };
-}
-
-export function toolError(toolName: string, error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`[tool] ${toolName} failed: ${message}`);
-  return toolResponse({ success: false, error: `${toolName}: ${message}` }, true);
-}
 
 function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
   mcpServer.tool(

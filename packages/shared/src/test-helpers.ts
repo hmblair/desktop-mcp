@@ -5,6 +5,7 @@
 
 import { spawn, ChildProcess } from "child_process";
 import * as http from "http";
+import * as net from "net";
 
 function assert(cond: boolean, msg: string): void {
   if (!cond) {
@@ -80,9 +81,9 @@ function waitForServer(port: number, timeoutMs = 5000): Promise<void> {
 
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
-    const srv = require("net").createServer();
+    const srv = net.createServer();
     srv.listen(0, "127.0.0.1", () => {
-      const port = srv.address().port;
+      const port = (srv.address() as net.AddressInfo).port;
       srv.close(() => resolve(port));
     });
     srv.on("error", reject);

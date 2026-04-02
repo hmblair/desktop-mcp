@@ -2,6 +2,7 @@
  * Shared install helpers for MCP server configuration.
  */
 
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
@@ -99,7 +100,6 @@ export function uninstallNativeHost(name: string): void {
  * Install into Claude Code via `claude mcp add` CLI.
  */
 export function installClaudeCode(serverName: string, mcpUrl: string): void {
-  const { execFileSync } = require("child_process");
   try {
     execFileSync("claude", ["mcp", "remove", "--scope", "user", serverName], { stdio: "ignore" });
   } catch {
@@ -117,7 +117,6 @@ export function installClaudeCode(serverName: string, mcpUrl: string): void {
  * Remove from Claude Code.
  */
 export function uninstallClaudeCode(serverName: string): void {
-  const { execFileSync } = require("child_process");
   try {
     execFileSync("claude", ["mcp", "remove", "--scope", "user", serverName], { stdio: "ignore" });
   } catch {
@@ -169,4 +168,63 @@ export function uninstallOpenCode(serverName: string): void {
   delete config.mcp[serverName];
   writeJson(CONFIG_PATHS.openCode, config);
   console.log(`  Removed ${serverName} from ${CONFIG_PATHS.openCode}`);
+}
+
+export interface InstallerConfig {
+  serverName: string;
+  nativeAppName: string;
+  nativeHostDescription: string;
+  nativeHostJsPath: string;
+  allowedExtensions: string[];
+  httpPort: number;
+  beforeInstall?: () => void;
+}
+
+export function runInstaller(config: InstallerConfig): void {
+  const mcpUrl = `http://localhost:${config.httpPort}/mcp`;
+  const command = process.argv[2];
+
+  if (command === "uninstall") {
+    console.log();
+    uninstallNativeHost(config.nativeAppName);
+    uninstallClaudeCode(config.serverName);
+    uninstallClaudeDesktop(config.serverName);
+    uninstallOpenCode(config.serverName);
+    console.log();
+    return;
+  }
+
+  (async () => {
+    console.log();
+
+    installNativeHost({
+      name: config.nativeAppName,
+      description: config.nativeHostDescription,
+      nativeHostJsPath: config.nativeHostJsPath,
+      allowedExtensions: config.allowedExtensions,
+    });
+
+    if (config.beforeInstall) config.beforeInstall();
+
+    console.log();
+    if (await ask("Install into Claude Code? [Y/n] ")) {
+      installClaudeCode(config.serverName, mcpUrl);
+    } else {
+      console.log("  Skipped.");
+    }
+    console.log();
+    if (await ask("Install into Claude Desktop? [Y/n] ")) {
+      installClaudeDesktop(config.serverName, mcpUrl);
+    } else {
+      console.log("  Skipped.");
+    }
+    console.log();
+    if (await ask("Install into OpenCode (~/.config/opencode/opencode.json)? [Y/n] ")) {
+      installOpenCode(config.serverName, mcpUrl);
+    } else {
+      console.log("  Skipped.");
+    }
+    console.log();
+    closePrompt();
+  })();
 }

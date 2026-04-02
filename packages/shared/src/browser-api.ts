@@ -5,6 +5,7 @@
  * Subclass and add domain-specific methods (e.g., openLink, searchMessages).
  */
 
+import { randomUUID } from "crypto";
 import { startNativeMessageReader, writeNativeMessage } from "./native-messaging";
 import type { ServerMessageBase, ExtensionMessageBase, ExtensionError } from "./types";
 
@@ -13,7 +14,7 @@ const DEFAULT_RESPONSE_TIMEOUT_MS = 60_000;
 interface PendingRequest<TExtMsg extends ExtensionMessageBase> {
   resource: TExtMsg["resource"];
   resolve: (value: TExtMsg) => void;
-  reject: (reason?: string) => void;
+  reject: (reason?: Error) => void;
 }
 
 function isErrorMessage(message: unknown): message is ExtensionError {
@@ -72,7 +73,7 @@ export class BaseBrowserAPI<
       );
     }
 
-    const correlationId = Math.random().toString(36).substring(2);
+    const correlationId = randomUUID();
     const req = { ...message, correlationId };
 
     console.error(`[browser-api] Sending ${req.cmd} (id: ${correlationId})`);
@@ -98,7 +99,7 @@ export class BaseBrowserAPI<
         setTimeout(() => {
           if (this.extensionRequestMap.has(correlationId)) {
             this.extensionRequestMap.delete(correlationId);
-            reject(`Timed out waiting for '${resource}' response (id: ${correlationId})`);
+            reject(new Error(`Timed out waiting for '${resource}' response (id: ${correlationId})`));
           }
         }, this.responseTimeoutMs);
       }
@@ -116,7 +117,7 @@ export class BaseBrowserAPI<
     if (resource !== decoded.resource) {
       console.error(`[browser-api] Resource mismatch for id ${correlationId}: expected '${resource}', got '${decoded.resource}'`);
       this.extensionRequestMap.delete(correlationId);
-      reject(`Resource mismatch: expected '${resource}', got '${decoded.resource}'`);
+      reject(new Error(`Resource mismatch: expected '${resource}', got '${decoded.resource}'`));
       return;
     }
     console.error(`[browser-api] Received ${decoded.resource} (id: ${correlationId})`);
@@ -133,6 +134,6 @@ export class BaseBrowserAPI<
     }
     console.error(`[browser-api] Extension error (id: ${correlationId}): ${errorMessage}`);
     this.extensionRequestMap.delete(correlationId);
-    entry.reject(errorMessage);
+    entry.reject(new Error(errorMessage));
   }
 }

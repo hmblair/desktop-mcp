@@ -37,4 +37,4 @@ jobs:
       - name: Build XPIs
         run: |
           cd packages/firefox && make xpi
-          cd ../thunderbird && make dist/thunderbird-mcp.xpi
+          cd ../thunderbird && make xpi

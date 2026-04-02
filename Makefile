@@ -5,7 +5,7 @@ build: node_modules
 	npm run build -w packages/firefox
 	npm run build -w packages/thunderbird
 	cd packages/firefox && make xpi
-	cd packages/thunderbird && make dist/thunderbird-mcp.xpi
+	cd packages/thunderbird && make xpi
 
 test:
 	npm run test -w packages/firefox

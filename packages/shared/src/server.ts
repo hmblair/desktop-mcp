@@ -3,6 +3,9 @@
  * Creates an McpServer with Streamable HTTP transport, plugin loading, and signal handling.
  */
 
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { BaseBrowserAPI } from "./browser-api";
 import type { ServerMessageBase, ExtensionMessageBase } from "./types";
@@ -38,10 +41,6 @@ interface PluginConfig {
 }
 
 function loadPluginConfig(configName: string): PluginConfig {
-  const fs = require("fs");
-  const path = require("path");
-  const os = require("os");
-
   const configPaths = [
     path.join(os.homedir(), ".config", configName, "config.json"),
     path.join(os.homedir(), `.${configName}.json`),
@@ -129,7 +128,13 @@ export function createServer<TApi extends BaseBrowserAPI<ServerMessageBase, Exte
       if (req.method === "POST") {
         const chunks: Buffer[] = [];
         for await (const chunk of req) chunks.push(chunk as Buffer);
-        body = JSON.parse(Buffer.concat(chunks).toString());
+        try {
+          body = JSON.parse(Buffer.concat(chunks).toString());
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON in request body" }));
+          return;
+        }
       }
 
       // Stateless: fresh MCP server + transport per request, sharing the BrowserAPI

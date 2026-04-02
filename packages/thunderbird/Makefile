@@ -7,10 +7,14 @@ COMP_DIR = ~/.local/share/zsh/site-functions
 
 .PHONY: build clean tag install uninstall install-headless uninstall-headless start stop restart status
 
-build: server dist/thunderbird-mcp.xpi
+.PHONY: xpi
+
+build: server xpi
 
 server:
 	@npm run build:server
+
+xpi: dist/thunderbird-mcp.xpi
 
 dist/thunderbird-mcp.xpi: extension/**/*
 	@echo "Building Thunderbird MCP extension v$(VERSION)..."
@@ -62,3 +66,4 @@ status:
 
 clean:
 	rm -rf dist/
+	rm -rf server/dist/

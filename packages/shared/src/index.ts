@@ -9,6 +9,8 @@ export type {
   ExtensionError,
   ActionResult,
 } from "./types";
+export { toolResponse, toolError } from "./tool-response";
+export { createNativeHost } from "./native-host";
 export { smokeTest } from "./test-helpers";
 export {
   CONFIG_PATHS,
@@ -24,4 +26,5 @@ export {
   uninstallClaudeDesktop,
   installOpenCode,
   uninstallOpenCode,
+  runInstaller,
 } from "./install";

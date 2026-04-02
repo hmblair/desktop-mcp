@@ -1,18 +1,13 @@
 import {
   createServer as createSharedServer,
   McpServer,
+  toolResponse,
+  toolError,
 } from "@desktop-mcp/shared";
 import type { ManagedServer } from "@desktop-mcp/shared";
 import { z } from "zod";
 import { ThunderbirdAPI } from "./browser-api";
 import { HTTP_PORT } from "../common";
-
-export function toolResponse(data: unknown, isError = false) {
-  const content: { type: "text"; text: string; isError?: true }[] = [
-    { type: "text", text: JSON.stringify(data, null, 2), ...(isError && { isError: true as const }) },
-  ];
-  return { content };
-}
 
 function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
   async function call(toolName: string, args: Record<string, unknown>) {
@@ -20,12 +15,23 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
       const result = await api.callTool(toolName, args);
       return toolResponse(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return toolResponse({ error: `${toolName}: ${message}` }, true);
+      return toolError(toolName, error);
     }
   }
 
-  mcpServer.tool(
+  // Wrapper that avoids deep type inference on complex zod schemas (TS2589).
+  // All Thunderbird tools funnel through call() with Record<string, unknown>,
+  // so the inferred parameter types are unused.
+  function tool(
+    name: string,
+    description: string,
+    schema: Record<string, z.ZodTypeAny>,
+    handler: (args: Record<string, unknown>) => Promise<ReturnType<typeof toolResponse>>
+  ) {
+    mcpServer.tool(name, description, schema as any, handler as any);
+  }
+
+  tool(
     "listAccounts",
     `List all email accounts and their identities`,
     {
@@ -34,7 +40,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("listAccounts", args)
   );
 
-  mcpServer.tool(
+  tool(
     "listFolders",
     `List all mail folders with paths and message counts`,
     {
@@ -45,7 +51,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("listFolders", args)
   );
 
-  mcpServer.tool(
+  tool(
     "searchMessages",
     `Search messages by query, sender, recipient, subject, date range, folder, account, tags, attachments, read/flagged status, or just count them. Results are grouped by conversation thread. Use getThread with a messageId + folderPath from the results to read full message bodies.`,
     {
@@ -70,7 +76,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("searchMessages", args)
   );
 
-  mcpServer.tool(
+  tool(
     "getThread",
     `Read all messages in a conversation thread with full bodies. Finds messages across all folders (Inbox, Sent, etc.) via Gloda. Provide any messageId + folderPath from searchMessages results to get the entire conversation.`,
     {
@@ -80,14 +86,14 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("getThread", args)
   );
 
-  mcpServer.tool(
+  tool(
     "listCalendars",
     `Return the user's calendars. Each calendar is identified by a path like 'user@example.com/CalendarName' or 'Local/CalendarName'.`,
     {},
     async () => call("listCalendars", {})
   );
 
-  mcpServer.tool(
+  tool(
     "createEvent",
     `Create a calendar event.`,
     {
@@ -103,7 +109,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("createEvent", args)
   );
 
-  mcpServer.tool(
+  tool(
     "listEvents",
     `List calendar events within a date range`,
     {
@@ -115,7 +121,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("listEvents", args)
   );
 
-  mcpServer.tool(
+  tool(
     "updateEvent",
     `Update an existing calendar event's title, dates, location, or description`,
     {
@@ -131,7 +137,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("updateEvent", args)
   );
 
-  mcpServer.tool(
+  tool(
     "deleteEvent",
     `Delete a calendar event`,
     {
@@ -141,7 +147,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("deleteEvent", args)
   );
 
-  mcpServer.tool(
+  tool(
     "moveEvent",
     `Move a calendar event from one calendar to another`,
     {
@@ -152,7 +158,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("moveEvent", args)
   );
 
-  mcpServer.tool(
+  tool(
     "listTasks",
     `List tasks (todos) from calendars, optionally filtered by date range and completion status`,
     {
@@ -165,7 +171,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("listTasks", args)
   );
 
-  mcpServer.tool(
+  tool(
     "createTask",
     `Create a new task (todo).`,
     {
@@ -178,7 +184,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("createTask", args)
   );
 
-  mcpServer.tool(
+  tool(
     "updateTask",
     `Update a task's title, due date, description, priority, completion percentage, or status`,
     {
@@ -194,7 +200,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("updateTask", args)
   );
 
-  mcpServer.tool(
+  tool(
     "deleteTask",
     `Delete a task (todo) from a calendar`,
     {
@@ -204,7 +210,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("deleteTask", args)
   );
 
-  mcpServer.tool(
+  tool(
     "moveTask",
     `Move a task (todo) from one calendar to another`,
     {
@@ -215,7 +221,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("moveTask", args)
   );
 
-  mcpServer.tool(
+  tool(
     "searchContacts",
     `Find contacts the user interacted with`,
     {
@@ -224,7 +230,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("searchContacts", args)
   );
 
-  mcpServer.tool(
+  tool(
     "deleteMessages",
     `Delete messages from a folder. Drafts are moved to Trash instead of permanently deleted.`,
     {
@@ -234,7 +240,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("deleteMessages", args)
   );
 
-  mcpServer.tool(
+  tool(
     "deleteMessagesBySender",
     `Delete all messages from one or more senders across all folders in an account. Searches and deletes in one step.`,
     {
@@ -245,7 +251,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("deleteMessagesBySender", args)
   );
 
-  mcpServer.tool(
+  tool(
     "updateMessages",
     `Update one or more messages: mark read/unread, flag/unflag, add/remove tags, move, copy, or trash.`,
     {
@@ -262,7 +268,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("updateMessages", args)
   );
 
-  mcpServer.tool(
+  tool(
     "createFolder",
     `Create a new mail subfolder under an existing folder`,
     {
@@ -272,7 +278,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("createFolder", args)
   );
 
-  mcpServer.tool(
+  tool(
     "renameFolder",
     `Rename an existing mail folder`,
     {
@@ -282,7 +288,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("renameFolder", args)
   );
 
-  mcpServer.tool(
+  tool(
     "deleteFolder",
     `Delete a mail folder. By default moves to Trash; set permanent=true to delete permanently.`,
     {
@@ -292,7 +298,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("deleteFolder", args)
   );
 
-  mcpServer.tool(
+  tool(
     "moveFolder",
     `Move a folder to be a subfolder of a different parent folder`,
     {
@@ -302,7 +308,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("moveFolder", args)
   );
 
-  mcpServer.tool(
+  tool(
     "emptyJunk",
     `Permanently delete all messages in the Junk/Spam folder`,
     {
@@ -311,7 +317,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("emptyJunk", args)
   );
 
-  mcpServer.tool(
+  tool(
     "emptyTrash",
     `Permanently delete all messages in the Trash folder`,
     {
@@ -320,7 +326,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("emptyTrash", args)
   );
 
-  mcpServer.tool(
+  tool(
     "createDraft",
     `Save a message as a draft without opening a compose window. Can also create a reply draft by providing messageId and folderPath of the original message.`,
     {
@@ -340,7 +346,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("createDraft", args)
   );
 
-  mcpServer.tool(
+  tool(
     "sendDraft",
     `Send a draft message. Use searchMessages on the Drafts folder to find draft message IDs.`,
     {
@@ -350,7 +356,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("sendDraft", args)
   );
 
-  mcpServer.tool(
+  tool(
     "createFeedAccount",
     `Create a new RSS/Atom feed account`,
     {
@@ -359,7 +365,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("createFeedAccount", args)
   );
 
-  mcpServer.tool(
+  tool(
     "listFeeds",
     `List subscribed RSS/Atom feeds. Can filter by account or folder. Feed items are regular messages readable via searchMessages/getThread.`,
     {
@@ -369,7 +375,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("listFeeds", args)
   );
 
-  mcpServer.tool(
+  tool(
     "subscribeFeed",
     `Subscribe to an RSS/Atom feed URL. Creates a folder for the feed and downloads its items as messages.`,
     {
@@ -380,7 +386,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("subscribeFeed", args)
   );
 
-  mcpServer.tool(
+  tool(
     "unsubscribeFeed",
     `Remove an RSS/Atom feed subscription. Removes the feed from the subscriptions database and its cached items.`,
     {
@@ -390,7 +396,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("unsubscribeFeed", args)
   );
 
-  mcpServer.tool(
+  tool(
     "getNewMail",
     `Check for new mail from the server. Can check a specific account or all accounts.`,
     {
@@ -399,7 +405,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("getNewMail", args)
   );
 
-  mcpServer.tool(
+  tool(
     "refreshFeeds",
     `Trigger a feed refresh/download. Can refresh a specific folder, an entire account, or all RSS accounts.`,
     {
@@ -409,7 +415,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("refreshFeeds", args)
   );
 
-  mcpServer.tool(
+  tool(
     "getAttachment",
     `Download an attachment from an email message and save it to a local file. Use searchMessages with hasAttachments=true to find messages with attachments, then getThread to see attachment names.`,
     {
@@ -422,7 +428,7 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     async (args) => call("getAttachment", args)
   );
 
-  mcpServer.tool(
+  tool(
     "unsubscribe",
     `Unsubscribe from a mailing list by sending a one-click unsubscribe POST request using the message's List-Unsubscribe header (RFC 8058).`,
     {
