@@ -19,17 +19,14 @@ function registerTools(mcpServer: McpServer, api: ThunderbirdAPI) {
     }
   }
 
-  // Wrapper that avoids deep type inference on complex zod schemas (TS2589).
-  // All Thunderbird tools funnel through call() with Record<string, unknown>,
-  // so the inferred parameter types are unused.
-  function tool(
+  // Localized cast to avoid deep generic inference through mcpServer.tool's overloads
+  // (TS2589) — all Thunderbird tools funnel through call() so parameter types are uniform.
+  const tool = mcpServer.tool.bind(mcpServer) as unknown as (
     name: string,
     description: string,
     schema: Record<string, z.ZodTypeAny>,
     handler: (args: Record<string, unknown>) => Promise<ReturnType<typeof toolResponse>>
-  ) {
-    mcpServer.tool(name, description, schema as any, handler as any);
-  }
+  ) => void;
 
   tool(
     "listAccounts",

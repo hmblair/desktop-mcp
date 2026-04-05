@@ -22,6 +22,12 @@ export function createNativeHost(opts: {
     process.exit(1);
   });
 
+  process.on("unhandledRejection", (reason: unknown) => {
+    const msg = reason instanceof Error ? reason.stack || reason.message : String(reason);
+    log(`UNHANDLED REJECTION: ${msg}`);
+    process.exit(1);
+  });
+
   const { start } = opts.createServer();
 
   start().catch((err) => {

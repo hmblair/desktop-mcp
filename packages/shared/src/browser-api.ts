@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 import { startNativeMessageReader, writeNativeMessage } from "./native-messaging";
 import type { ServerMessageBase, ExtensionMessageBase, ExtensionError } from "./types";
 
-const DEFAULT_RESPONSE_TIMEOUT_MS = 60_000;
+const DEFAULT_RESPONSE_TIMEOUT_MS = 120_000;
 
 interface PendingRequest<TExtMsg extends ExtensionMessageBase> {
   resource: TExtMsg["resource"];

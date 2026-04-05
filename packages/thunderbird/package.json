@@ -38,7 +38,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@desktop-mcp/shared": "*",
+    "@desktop-mcp/shared": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.7.0",
     "zod": "^3.24.0"
   },

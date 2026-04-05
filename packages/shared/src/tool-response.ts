@@ -10,7 +10,12 @@ export function toolResponse(data: unknown, isError = false) {
 }
 
 export function toolError(toolName: string, error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : String(error);
   console.error(`[tool] ${toolName} failed: ${message}`);
   return toolResponse({ success: false, error: `${toolName}: ${message}` }, true);
 }

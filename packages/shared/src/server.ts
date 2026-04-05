@@ -130,7 +130,9 @@ export function createServer<TApi extends BaseBrowserAPI<ServerMessageBase, Exte
         for await (const chunk of req) chunks.push(chunk as Buffer);
         try {
           body = JSON.parse(Buffer.concat(chunks).toString());
-        } catch {
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[server] Invalid JSON in request body from ${req.socket.remoteAddress}: ${msg}`);
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Invalid JSON in request body" }));
           return;

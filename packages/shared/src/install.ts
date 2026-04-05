@@ -226,5 +226,9 @@ export function runInstaller(config: InstallerConfig): void {
     }
     console.log();
     closePrompt();
-  })();
+  })().catch((err) => {
+    console.error("Install failed:", err instanceof Error ? err.stack || err.message : err);
+    closePrompt();
+    process.exit(1);
+  });
 }

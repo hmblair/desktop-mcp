@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
-    "@desktop-mcp/shared": "*",
+    "@desktop-mcp/shared": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.7.0",
     "dayjs": "^1.11.13",
     "zod": "^3.24.0"

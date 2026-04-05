@@ -34,7 +34,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
         if (resultTabId !== undefined) {
           return toolResponse({ success: true, tabId: resultTabId, url, newTab });
         }
-        return toolResponse({ success: false, error: "Failed to open URL" }, true);
+        return toolError("openLink", "Failed to open URL");
       } catch (error) {
         return toolError("openLink", error);
       }
@@ -212,7 +212,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
           }
           return toolResponse(data);
         }
-        return toolResponse({ success: false, error: result.error || "Unknown error" }, true);
+        return toolError("clickElement", result.error || "Unknown error");
       } catch (error) {
         return toolError("clickElement", error);
       }
@@ -241,7 +241,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
         if (result.success) {
           return toolResponse({ success: true, selector });
         }
-        return toolResponse({ success: false, error: result.error || `No element found matching "${selector}"` }, true);
+        return toolError("typeIntoField", result.error || `No element found matching "${selector}"`);
       } catch (error) {
         return toolError("typeIntoField", error);
       }
@@ -270,7 +270,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
         if (result.success) {
           return toolResponse({ success: true, selector });
         }
-        return toolResponse({ success: false, error: result.error || "Unknown error" }, true);
+        return toolError("clickAndType", result.error || "Unknown error");
       } catch (error) {
         return toolError("clickAndType", error);
       }
@@ -317,7 +317,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
         if (result.success) {
           return toolResponse({ success: true, selector, ...(values ? { values } : { value }) });
         }
-        return toolResponse({ success: false, error: result.error || `No <select> element found matching "${selector}"` }, true);
+        return toolError("selectOption", result.error || `No <select> element found matching "${selector}"`);
       } catch (error) {
         return toolError("selectOption", error);
       }
@@ -387,10 +387,7 @@ function registerBuiltinTools(mcpServer: McpServer, browserApi: FirefoxAPI) {
         if (found) {
           return toolResponse({ success: true, selector });
         }
-        return toolResponse(
-          { success: false, error: `Timed out after ${timeout ?? 5000}ms waiting for "${selector}"` },
-          true
-        );
+        return toolError("waitForSelector", `Timed out after ${timeout ?? 5000}ms waiting for "${selector}"`);
       } catch (error) {
         return toolError("waitForSelector", error);
       }
