@@ -4,28 +4,64 @@
  */
 
 /**
+ * Encode a value as a native messaging frame.
+ * Each frame: 4-byte LE length prefix + UTF-8 JSON body.
+ */
+export function encodeFrame(msg: unknown): Buffer {
+  const body = Buffer.from(JSON.stringify(msg), "utf-8");
+  const header = Buffer.alloc(4);
+  header.writeUInt32LE(body.length, 0);
+  return Buffer.concat([header, body]);
+}
+
+export interface ParsedFrames {
+  messages: unknown[];
+  remaining: Buffer;
+  parseErrors: Error[];
+}
+
+/**
+ * Parse as many complete frames as possible from a buffer.
+ * Returns successfully parsed messages, any bytes that form an incomplete
+ * trailing frame, and JSON parse errors for individual frames.
+ */
+export function parseFrames(buffer: Buffer): ParsedFrames {
+  const messages: unknown[] = [];
+  const parseErrors: Error[] = [];
+  let remaining: Buffer = buffer;
+
+  while (remaining.length >= 4) {
+    const messageLength = remaining.readUInt32LE(0);
+    if (remaining.length < 4 + messageLength) break;
+
+    const json = remaining.subarray(4, 4 + messageLength).toString("utf-8");
+    remaining = remaining.subarray(4 + messageLength);
+
+    try {
+      messages.push(JSON.parse(json));
+    } catch (error) {
+      parseErrors.push(error as Error);
+    }
+  }
+
+  return { messages, remaining, parseErrors };
+}
+
+/**
  * Read native messaging frames from stdin.
  * Each frame: 4-byte LE length prefix + UTF-8 JSON body.
  */
 export function startNativeMessageReader(onMessage: (msg: unknown) => void): void {
-  let buffer = Buffer.alloc(0);
+  let buffer: Buffer = Buffer.alloc(0);
 
   process.stdin.on("data", (chunk: Buffer) => {
     buffer = Buffer.concat([buffer, chunk]);
-
-    while (buffer.length >= 4) {
-      const messageLength = buffer.readUInt32LE(0);
-      if (buffer.length < 4 + messageLength) break;
-
-      const json = buffer.subarray(4, 4 + messageLength).toString("utf-8");
-      buffer = buffer.subarray(4 + messageLength);
-
-      try {
-        onMessage(JSON.parse(json));
-      } catch (error) {
-        console.error("[native] Failed to parse message:", error);
-      }
+    const { messages, remaining, parseErrors } = parseFrames(buffer);
+    buffer = remaining;
+    for (const err of parseErrors) {
+      console.error("[native] Failed to parse message:", err);
     }
+    for (const msg of messages) onMessage(msg);
   });
 }
 
@@ -33,10 +69,6 @@ export function startNativeMessageReader(onMessage: (msg: unknown) => void): voi
  * Write a native messaging frame to stdout.
  */
 export function writeNativeMessage(msg: unknown): void {
-  const json = JSON.stringify(msg);
-  const body = Buffer.from(json, "utf-8");
-  const header = Buffer.alloc(4);
-  header.writeUInt32LE(body.length, 0);
-  process.stdout.write(header);
-  process.stdout.write(body);
+  const frame = encodeFrame(msg);
+  process.stdout.write(frame);
 }

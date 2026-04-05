@@ -6,7 +6,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test 'dist/__tests__/*.test.js'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",

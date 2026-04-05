@@ -1,5 +1,6 @@
 export { BaseBrowserAPI } from "./browser-api";
-export { startNativeMessageReader, writeNativeMessage } from "./native-messaging";
+export { startNativeMessageReader, writeNativeMessage, encodeFrame, parseFrames } from "./native-messaging";
+export type { ParsedFrames } from "./native-messaging";
 export { createServer, McpServer, ResourceTemplate } from "./server";
 export type { CreateServerOptions, ManagedServer } from "./server";
 export type {
