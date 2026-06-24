@@ -2,7 +2,7 @@
 
 Give your AI assistant full access to Thunderbird — read and organize mail, manage calendars and tasks, compose messages, and look up contacts. All through the [Model Context Protocol](https://modelcontextprotocol.io/).
 
-Originally forked from [TKasperczyk/thunderbird-mcp](https://github.com/TKasperczyk/thunderbird-mcp).
+Originally forked from [TKasperczyk/thunderbird-mcp](https://github.com/TKasperczyk/thunderbird-mcp). Substantially rewritten since.
 
 ---
 

@@ -52,6 +52,13 @@ npm run test -w packages/firefox      # Smoke test firefox
 npm run test -w packages/thunderbird  # Smoke test thunderbird
 ```
 
+## Acknowledgments
+
+This project began as two separate forks, both substantially rewritten since:
+
+- **thunderbird-mcp** — forked from [TKasperczyk/thunderbird-mcp](https://github.com/TKasperczyk/thunderbird-mcp) by Tomasz Kasperczyk.
+- **firefox-mcp** — forked from [eyalzh/browser-control-mcp](https://github.com/eyalzh/browser-control-mcp) by eyalzh (named `firefox-mcp` at the time of the fork).
+
 ## License
 
 MIT. See [LICENSE](LICENSE) and individual package licenses.

@@ -2,6 +2,8 @@
 
 An MCP server paired with a Firefox extension that enables AI assistants to control the user's browser.
 
+Originally forked from [eyalzh/browser-control-mcp](https://github.com/eyalzh/browser-control-mcp) (named `firefox-mcp` at the time of the fork). Substantially rewritten since.
+
 ```
 MCP Client (Claude, etc.) <--HTTP--> Native Host <--native messaging--> Firefox Extension
 ```
