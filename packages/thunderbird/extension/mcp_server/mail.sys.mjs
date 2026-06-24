@@ -50,7 +50,9 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
   // Look up a msgHdr's Gloda conversation. Returns a Promise resolving to
   // { id, glodaMsg } or null if Gloda is unavailable / message not indexed.
   function glodaLookup(msgHdr) {
-    if (!Gloda) return Promise.resolve(null);
+    if (!Gloda) { mcpDebug("glodaLookup", { result: "Gloda unavailable" }); return Promise.resolve(null); }
+    const msgId = msgHdr.messageId;
+    mcpDebug("glodaLookup", { messageId: msgId, subject: msgHdr.mime2DecodedSubject });
     return new Promise((resolve) => {
       try {
         Gloda.getMessageCollectionForHeader(msgHdr, {
@@ -58,11 +60,14 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
           onItemsModified() {},
           onItemsRemoved() {},
           onQueryCompleted(coll) {
+            mcpDebug("glodaLookup", { messageId: msgId, onQueryCompleted: true, itemCount: coll.items.length });
             const glodaMsg = coll.items[0];
             if (!glodaMsg || !glodaMsg.conversation) {
+              mcpDebug("glodaLookup", { messageId: msgId, result: "no conversation" });
               resolve(null);
               return;
             }
+            mcpDebug("glodaLookup", { messageId: msgId, result: "found", conversationId: String(glodaMsg.conversation.id) });
             resolve({ id: String(glodaMsg.conversation.id), glodaMsg });
           }
         }, null);
@@ -349,11 +354,13 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
       return { count };
     }
 
+    mcpDebug("searchMessages", { step: "sort", totalResults: results.length, effectiveLimit });
     // Sort and apply limit first (same as pre-grouping behaviour)
     results.sort((a, b) => normalizedSortOrder === "asc" ? a._dateTs - b._dateTs : b._dateTs - a._dateTs);
     results = results.slice(0, effectiveLimit);
 
     // Resolve Gloda conversation IDs in parallel for grouping
+    mcpDebug("searchMessages", { step: "glodaThreading start", count: results.length });
     await Promise.all(results.map(async (entry) => {
       try {
         entry._glodaConvId = await getThreadId(entry._msgHdr);
@@ -361,6 +368,7 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
         mcpWarn("threadId lookup", e);
       }
     }));
+    mcpDebug("searchMessages", { step: "glodaThreading done" });
 
     // Group messages by Gloda conversation ID
     const threadMap = new Map();
@@ -525,22 +533,27 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
   // Parse a single msgHdr into a full message object with body.
   // Returns a Promise resolving to the message object.
   function readFullMessage(msgHdr) {
+    const msgId = shortId(msgHdr.messageId);
+    const folder = folderShortPath(msgHdr.folder);
+    mcpDebug("readFullMessage", { id: msgId, folder, subject: msgHdr.mime2DecodedSubject });
     return new Promise((resolve) => {
       MsgHdrToMimeMessage(msgHdr, null, (aMsgHdr, aMimeMsg) => {
+        mcpDebug("readFullMessage", { id: msgId, callbackFired: true, hasMimeMsg: !!aMimeMsg });
         const msg = {
-          id: shortId(msgHdr.messageId),
+          id: msgId,
           subject: msgHdr.mime2DecodedSubject || msgHdr.subject,
           author: parseAddress(msgHdr.mime2DecodedAuthor || msgHdr.author),
           recipients: parseAddressList(msgHdr.mime2DecodedRecipients || msgHdr.recipients),
           cc: parseAddressList(msgHdr.ccList),
           date: msgHdr.date ? formatLocalJsDate(new Date(msgHdr.date / 1000)) : null,
-          folderPath: folderShortPath(msgHdr.folder),
+          folderPath: folder,
           read: msgHdr.isRead,
           body: aMimeMsg ? extractBody(aMimeMsg) : "(Could not parse message)",
           attachments: aMimeMsg ? extractAttachmentInfo(aMimeMsg) : [],
         };
         // Mark as read
         try { msgHdr.folder.markMessagesRead([msgHdr], true); } catch {}
+        mcpDebug("readFullMessage", { id: msgId, result: "done", bodyLength: msg.body.length });
         resolve(msg);
       }, true, { examineEncryptedParts: true });
     });
@@ -560,9 +573,12 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
     const seedHdr = found.msgHdr;
 
     // Try Gloda for cross-folder thread resolution
+    mcpDebug("getThread", "glodaLookup start");
     const glodaResult = await glodaLookup(seedHdr);
+    mcpDebug("getThread", `glodaLookup done, result=${glodaResult ? "found" : "null"}`);
 
     if (glodaResult) {
+      mcpDebug("getThread", "getMessagesCollection start");
       const convMsgs = await new Promise((resolve) => {
         glodaResult.glodaMsg.conversation.getMessagesCollection({
           onItemsAdded() {},
@@ -578,14 +594,19 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
           }
         }, null);
       });
+      mcpDebug("getThread", `getMessagesCollection done, ${convMsgs.length} messages`);
 
       convMsgs.sort((a, b) => (a.date || 0) - (b.date || 0));
+      mcpDebug("getThread", "readFullMessage start");
       const messages = await Promise.all(convMsgs.map(hdr => readFullMessage(hdr)));
+      mcpDebug("getThread", "readFullMessage done");
       return { messages };
     }
 
     // Fallback: Gloda unavailable or message not indexed — return single message
+    mcpDebug("getThread", "fallback readFullMessage start");
     const msg = await readFullMessage(seedHdr);
+    mcpDebug("getThread", "fallback readFullMessage done");
     return { messages: [msg] };
   }
 
@@ -863,8 +884,12 @@ export function createMailHandlers({ MailServices, Services, Cc, Ci, NetUtil, Ch
     if (found.error) return { error: found.error };
 
     // Get attachment metadata via MimeMessage to resolve name/index to partName
+    mcpDebug("getAttachment", { step: "MsgHdrToMimeMessage start" });
     const aMimeMsg = await new Promise((resolve) => {
-      MsgHdrToMimeMessage(found.msgHdr, null, (_hdr, msg) => resolve(msg), true, { examineEncryptedParts: true });
+      MsgHdrToMimeMessage(found.msgHdr, null, (_hdr, msg) => {
+        mcpDebug("getAttachment", { step: "MsgHdrToMimeMessage done", hasMimeMsg: !!msg });
+        resolve(msg);
+      }, true, { examineEncryptedParts: true });
     });
     if (!aMimeMsg) return { error: "Could not parse message" };
 

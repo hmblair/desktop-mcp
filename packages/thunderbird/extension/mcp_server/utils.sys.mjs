@@ -1,13 +1,11 @@
 // utils.sys.mjs — Shared utilities for thunderbird-mcp modules
 
+import { mcpDebug } from "./debug.sys.mjs";
+
 export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
 
   function mcpWarn(context, error) {
     console.warn(`[thunderbird-mcp] ${context}:`, error?.message || error);
-  }
-
-  function mcpDebug(context, data) {
-    console.log(`[thunderbird-mcp:debug] ${context}:`, JSON.stringify(data));
   }
 
   function parseDate(s) {
@@ -50,14 +48,17 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
   }
 
   function openFolder(folderPath) {
+    mcpDebug("openFolder", { folderPath });
     try {
       const folder = resolveFolder(folderPath);
       if (!folder) {
+        mcpWarn("openFolder", `folder not found: ${folderPath}`);
         return { error: `Folder not found: ${folderPath}` };
       }
 
       if (folder.server && folder.server.type === "imap") {
         try {
+          mcpDebug("openFolder", { step: "IMAP updateFolder", server: folder.server.hostName });
           folder.updateFolder(null);
         } catch (e) { mcpWarn("IMAP folder refresh", e);
         }
@@ -65,11 +66,14 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
 
       const db = folder.msgDatabase;
       if (!db) {
+        mcpWarn("openFolder", "could not access folder database");
         return { error: "Could not access folder database" };
       }
 
+      mcpDebug("openFolder", { result: "ok", path: folderShortPath(folder) });
       return { folder, db };
     } catch (e) {
+      mcpWarn("openFolder", e);
       return { error: e.toString() };
     }
   }
@@ -135,22 +139,25 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
 
   function resolveFolder(input) {
     if (!input || typeof input !== "string") return null;
+    mcpDebug("resolveFolder", { input });
 
     // Full URI — use directly
     if (input.includes("://")) {
-      return MailServices.folderLookup.getFolderForURL(input);
+      const folder = MailServices.folderLookup.getFolderForURL(input);
+      mcpDebug("resolveFolder", { input, resolvedByURI: !!folder });
+      return folder;
     }
 
     // Short form: "accountId/Folder/Subfolder" or "accountId/Folder"
     const slashIdx = input.indexOf("/");
-    if (slashIdx < 1) return null;
+    if (slashIdx < 1) { mcpDebug("resolveFolder", { input, error: "no slash" }); return null; }
 
     const accountKey = input.substring(0, slashIdx);
     const pathParts = input.substring(slashIdx + 1).split("/").filter(Boolean);
     if (pathParts.length === 0) return null;
 
     const account = resolveAccount(accountKey);
-    if (!account) return null;
+    if (!account) { mcpDebug("resolveFolder", { input, error: "account not found", accountKey }); return null; }
 
     const root = account.incomingServer?.rootFolder;
     if (!root) return null;
@@ -169,9 +176,10 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
           }
         }
       } catch {}
-      if (!found) return null;
+      if (!found) { mcpDebug("resolveFolder", { input, error: "segment not found", segment }); return null; }
       current = found;
     }
+    mcpDebug("resolveFolder", { input, resolved: current.URI });
     return current;
   }
 
@@ -183,6 +191,7 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
 
   function resolveAccount(accountId) {
     if (!accountId || typeof accountId !== "string") return null;
+    mcpDebug("resolveAccount", { accountId });
     const lower = accountId.toLowerCase();
     for (const account of MailServices.accounts.accounts) {
       if (account.key === accountId) return account;
@@ -288,19 +297,22 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
   }
 
   function lookupMsgHdr(db, messageId) {
+    mcpDebug("lookupMsgHdr", { messageId });
     // Resolve short IDs transparently
     const fullId = resolveMessageId(messageId, db);
-    if (!fullId) return null;
+    if (!fullId) { mcpDebug("lookupMsgHdr", { messageId, error: "could not resolve ID" }); return null; }
 
     let hdr = null;
     if (typeof db.getMsgHdrForMessageID === "function") {
       try { hdr = db.getMsgHdrForMessageID(fullId); } catch { hdr = null; }
     }
     if (!hdr) {
+      mcpDebug("lookupMsgHdr", { messageId, step: "fallback enumeration" });
       for (const h of db.enumerateMessages()) {
         if (h.messageId === fullId) { hdr = h; break; }
       }
     }
+    mcpDebug("lookupMsgHdr", { messageId, found: !!hdr });
     return hdr;
   }
 
@@ -335,6 +347,7 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
   }
 
   function resolveCalendar(input) {
+    mcpDebug("resolveCalendar", { input });
     if (!cal) return { error: "Calendar not available" };
     if (!input || typeof input !== "string") return { error: "Calendar identifier is required" };
 
@@ -396,6 +409,7 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
   }
 
   function findMessage(messageId, folderPath) {
+    mcpDebug("findMessage", { messageId, folderPath });
     const opened = openFolder(folderPath);
     if (opened.error) return opened;
 
@@ -403,9 +417,11 @@ export function createUtils({ MailServices, Services, Cc, Ci, cal }) {
     const msgHdr = lookupMsgHdr(db, messageId);
 
     if (!msgHdr) {
+      mcpDebug("findMessage", { messageId, folderPath, result: "not found" });
       return { error: `Message not found: ${messageId}` };
     }
 
+    mcpDebug("findMessage", { messageId, folderPath, result: "found", subject: msgHdr.mime2DecodedSubject || msgHdr.subject });
     return { msgHdr, folder, db };
   }
 

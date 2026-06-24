@@ -103,14 +103,17 @@ export function createFeedHandlers({ MailServices, Services, Ci, ChromeUtils, ut
    * already in progress.
    */
   function waitForPendingDownloads(timeoutMs = 30000) {
+    mcpDebug("waitForPendingDownloads", { timeoutMs, pending: FeedUtils.progressNotifier.mNumPendingFeedDownloads });
     return new Promise((resolve, reject) => {
       const start = Date.now();
       function check() {
         if (FeedUtils.progressNotifier.mNumPendingFeedDownloads <= 0) {
+          mcpDebug("waitForPendingDownloads", { result: "clear", elapsed_ms: Date.now() - start });
           resolve();
           return;
         }
         if (Date.now() - start > timeoutMs) {
+          mcpDebug("waitForPendingDownloads", { result: "timeout", elapsed_ms: Date.now() - start });
           reject(new Error("Timed out waiting for pending feed downloads to finish"));
           return;
         }

@@ -4,6 +4,7 @@ export function createTaskHandlers({ cal, CalTodo, utils }) {
   const { mcpWarn, mcpDebug, parseDate, formatCalDateTime, findWritableCalendar, resolveCalendar, calendarPath, shortId } = utils;
 
   async function getCalendarTodos(calendar, rangeStart, rangeEnd) {
+    mcpDebug("getCalendarTodos", { calendar: calendarPath(calendar), hasRange: !!(rangeStart || rangeEnd) });
     const FILTER_ALL = 0xFFFF;
     let allItems;
     if (typeof calendar.getItemsAsArray === "function") {
@@ -15,10 +16,12 @@ export function createTaskHandlers({ cal, CalTodo, utils }) {
         for (const i of chunk) allItems.push(i);
       }
     }
-    return allItems.filter(i =>
+    const todos = allItems.filter(i =>
       (typeof i.isTodo === "function" && i.isTodo()) ||
       (i.icalString && i.icalString.includes("VTODO"))
     );
+    mcpDebug("getCalendarTodos", { calendar: calendarPath(calendar), totalItems: allItems.length, todoCount: todos.length });
+    return todos;
   }
 
   function resolveTaskId(input, items) {
@@ -32,14 +35,17 @@ export function createTaskHandlers({ cal, CalTodo, utils }) {
   }
 
   async function findTodo(taskId, calendarId) {
+    mcpDebug("findTodo", { taskId, calendarId });
     const resolved = resolveCalendar(calendarId);
     if (resolved.error) return resolved;
     const { calendar } = resolved;
     const items = await getCalendarTodos(calendar, null, null);
     const item = resolveTaskId(taskId, items);
     if (!item) {
+      mcpDebug("findTodo", { taskId, calendarId, result: "not found", totalItems: items.length });
       return { error: `Task not found: ${taskId}` };
     }
+    mcpDebug("findTodo", { taskId, calendarId, result: "found", title: item.title });
     return { item, calendar };
   }
 

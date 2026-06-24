@@ -19,15 +19,20 @@ export function createCalendarHandlers({ cal, CalEvent, ChromeUtils, utils }) {
   }
 
   async function getCalendarItems(calendar, rangeStart, rangeEnd) {
+    const calName = calendarPath(calendar);
+    mcpDebug("getCalendarItems", { calendar: calName, hasRange: !!(rangeStart || rangeEnd) });
     const FILTER_EVENT = 1 << 3;
+    let items;
     if (typeof calendar.getItemsAsArray === "function") {
-      return await calendar.getItemsAsArray(FILTER_EVENT, 0, rangeStart, rangeEnd);
+      items = await calendar.getItemsAsArray(FILTER_EVENT, 0, rangeStart, rangeEnd);
+    } else {
+      items = [];
+      const stream = cal.iterate.streamValues(calendar.getItems(FILTER_EVENT, 0, rangeStart, rangeEnd));
+      for await (const chunk of stream) {
+        for (const i of chunk) items.push(i);
+      }
     }
-    const items = [];
-    const stream = cal.iterate.streamValues(calendar.getItems(FILTER_EVENT, 0, rangeStart, rangeEnd));
-    for await (const chunk of stream) {
-      for (const i of chunk) items.push(i);
-    }
+    mcpDebug("getCalendarItems", { calendar: calName, itemCount: items.length });
     return items;
   }
 
@@ -44,6 +49,7 @@ export function createCalendarHandlers({ cal, CalEvent, ChromeUtils, utils }) {
   }
 
   async function findEvent(eventId, calendarId) {
+    mcpDebug("findEvent", { eventId, calendarId });
     const resolved = resolveCalendar(calendarId);
     if (resolved.error) return resolved;
     const { calendar } = resolved;
@@ -52,8 +58,10 @@ export function createCalendarHandlers({ cal, CalEvent, ChromeUtils, utils }) {
     const items = await getCalendarItems(calendar, rangeStart, rangeEnd);
     const item = resolveEventId(eventId, items);
     if (!item) {
+      mcpDebug("findEvent", { eventId, calendarId, result: "not found", totalItems: items.length });
       return { error: `Event not found: ${eventId}` };
     }
+    mcpDebug("findEvent", { eventId, calendarId, result: "found", title: item.title });
     return { item, calendar };
   }
 

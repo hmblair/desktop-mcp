@@ -27,6 +27,11 @@ var mcpServer = class extends ExtensionCommon.ExtensionAPI {
       resProto.ALLOW_CONTENT_ACCESS
     );
 
+    // Shared debug-logging gate (resource:// substitution is now registered).
+    const { mcpDebug } = ChromeUtils.importESModule(
+      "resource://thunderbird-mcp/mcp_server/debug.sys.mjs"
+    );
+
     return {
       mcpServer: {
         init: async function() {
@@ -139,7 +144,18 @@ var mcpServer = class extends ExtensionCommon.ExtensionAPI {
           if (!handler) {
             throw new Error(`Unknown tool: ${name}`);
           }
-          return await handler(args);
+          const startTime = Date.now();
+          mcpDebug("callTool", { tool: name, args });
+          try {
+            const result = await handler(args);
+            const elapsed = Date.now() - startTime;
+            mcpDebug("callTool done", { tool: name, elapsed_ms: elapsed, hasError: !!result?.error });
+            return result;
+          } catch (e) {
+            const elapsed = Date.now() - startTime;
+            console.warn(`[thunderbird-mcp] callTool error:`, JSON.stringify({ tool: name, elapsed_ms: elapsed, error: e?.message || String(e) }));
+            throw e;
+          }
         },
       }
     };

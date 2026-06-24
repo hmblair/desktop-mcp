@@ -127,6 +127,7 @@ export function createComposeHandlers({ MailServices, Services, Cc, Ci, ChromeUt
   }
 
   function saveDraftToFolder(mime, draftsFolder) {
+    mcpDebug("saveDraftToFolder", { folder: folderShortPath(draftsFolder), mimeLength: mime.length });
     const tmpFile = Services.dirsvc.get("TmpD", Ci.nsIFile);
     tmpFile.append("thunderbird-mcp-draft.eml");
     tmpFile.createUnique(Ci.nsIFile.NORMAL_FILE_TYPE, 0o600);
@@ -441,6 +442,7 @@ export function createComposeHandlers({ MailServices, Services, Cc, Ci, ChromeUt
           },
           onStopRequest(request, statusCode) {
             foStream.close();
+            mcpDebug("sendDraft", { step: "streamMessage done", statusCode });
 
             try {
               // Build compFields from the draft headers
@@ -484,6 +486,7 @@ export function createComposeHandlers({ MailServices, Services, Cc, Ci, ChromeUt
                 onStatus() {},
                 onGetDraftFolderURI() {},
                 onStopSending(msgID, status) {
+                  mcpDebug("sendDraft", { step: "onStopSending", msgID, status });
                   try { tmpFile.remove(false); } catch {}
 
                   if (status === 0) {
@@ -513,6 +516,7 @@ export function createComposeHandlers({ MailServices, Services, Cc, Ci, ChromeUt
           },
         };
 
+        mcpDebug("sendDraft", { step: "streamMessage start", streamUri });
         msgService.streamMessage(streamUri, streamListener, null, null, false, "", true);
       } catch (e) {
         resolve({ error: e.toString() });
